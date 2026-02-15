@@ -1,0 +1,8 @@
+apps/
+backend/
+packages/
+scripts/
+node_modules/
+.firebase/
+firebase.json
+*.log
