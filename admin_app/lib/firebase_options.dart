@@ -29,48 +29,47 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyDemoKey123456789012345678901234',
-    appId: '1:123456789012:web:abcdef1234567892',
-    messagingSenderId: '123456789012',
-    projectId: 'fish-market-demo',
-    authDomain: 'fish-market-demo.firebaseapp.com',
-    storageBucket: 'fish-market-demo.appspot.com',
-    measurementId: 'G-MEASUREMENT',
+    apiKey: 'AIzaSyCy-AfEXeselSilJVGkRqJKv6RcoEhu3to',
+    appId: '1:253929981076:web:b917b17159bd6196c86081',
+    messagingSenderId: '253929981076',
+    projectId: 'planning-with-ai-3f007',
+    authDomain: 'planning-with-ai-3f007.firebaseapp.com',
+    storageBucket: 'planning-with-ai-3f007.firebasestorage.app',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyDemoKey123456789012345678901234',
-    appId: '1:123456789012:android:abcdef1234567892',
-    messagingSenderId: '123456789012',
-    projectId: 'fish-market-demo',
-    storageBucket: 'fish-market-demo.appspot.com',
+    apiKey: 'AIzaSyC9aLWF8C82HR27HAgbcssMiV4AimmuWwk',
+    appId: '1:253929981076:android:76d9db8d6915ebf7c86081',
+    messagingSenderId: '253929981076',
+    projectId: 'planning-with-ai-3f007',
+    storageBucket: 'planning-with-ai-3f007.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyDemoKey123456789012345678901234',
-    appId: '1:123456789012:ios:abcdef1234567892',
-    messagingSenderId: '123456789012',
-    projectId: 'fish-market-demo',
-    storageBucket: 'fish-market-demo.appspot.com',
-    iosBundleId: 'com.fishmarket.adminapp',
+    apiKey: 'AIzaSyABbJnDnskVUhZSKXyOjDK083fIzSvDEk4',
+    appId: '1:253929981076:ios:77e1c954a0e91f39c86081',
+    messagingSenderId: '253929981076',
+    projectId: 'planning-with-ai-3f007',
+    storageBucket: 'planning-with-ai-3f007.firebasestorage.app',
+    iosBundleId: 'com.example.adminApp',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyDemoKey123456789012345678901234',
-    appId: '1:123456789012:ios:abcdef1234567892',
-    messagingSenderId: '123456789012',
-    projectId: 'fish-market-demo',
-    storageBucket: 'fish-market-demo.appspot.com',
-    iosBundleId: 'com.fishmarket.adminapp',
+    apiKey: 'AIzaSyABbJnDnskVUhZSKXyOjDK083fIzSvDEk4',
+    appId: '1:253929981076:ios:77e1c954a0e91f39c86081',
+    messagingSenderId: '253929981076',
+    projectId: 'planning-with-ai-3f007',
+    storageBucket: 'planning-with-ai-3f007.firebasestorage.app',
+    iosBundleId: 'com.example.adminApp',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyDemoKey123456789012345678901234',
-    appId: '1:123456789012:web:abcdef1234567892',
-    messagingSenderId: '123456789012',
-    projectId: 'fish-market-demo',
-    authDomain: 'fish-market-demo.firebaseapp.com',
-    storageBucket: 'fish-market-demo.appspot.com',
-    measurementId: 'G-MEASUREMENT',
+    apiKey: 'AIzaSyCy-AfEXeselSilJVGkRqJKv6RcoEhu3to',
+    appId: '1:253929981076:web:b917b17159bd6196c86081',
+    messagingSenderId: '253929981076',
+    projectId: 'planning-with-ai-3f007',
+    authDomain: 'planning-with-ai-3f007.firebaseapp.com',
+    storageBucket: 'planning-with-ai-3f007.firebasestorage.app',
   );
+
 }
