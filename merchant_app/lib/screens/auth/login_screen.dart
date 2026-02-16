@@ -157,12 +157,16 @@ class _LoginScreenState extends State<LoginScreen> {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text('Please enter 6-digit OTP'),
+                            backgroundColor: Colors.red,
                           ),
                         );
                         return;
                       }
                       setState(() => _isLoading = true);
-                      await Future.delayed(const Duration(milliseconds: 500));
+
+                      // TEST MODE - Accept any 6-digit code
+                      await Future.delayed(const Duration(milliseconds: 800));
+
                       setState(() => _isLoading = false);
                       if (!mounted) return;
                       Navigator.pop(context);
