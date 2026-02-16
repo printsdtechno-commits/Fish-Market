@@ -17,9 +17,10 @@ class _LoginScreenState extends State<LoginScreen> {
   final _authService = AuthService();
 
   bool _isLoading = false;
+  bool _codeSent = false;
   int _resendTimer = 30;
   Timer? _timer;
-  String _generatedOTP = '';
+  String _verificationId = '';
 
   @override
   void dispose() {
@@ -56,26 +57,32 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     setState(() => _isLoading = true);
+
     final fullPhone = phone.startsWith('+91') ? phone : '+91$phone';
 
-    // Generate test OTP
-    _generatedOTP = (DateTime.now().millisecondsSinceEpoch % 1000000)
-        .toString()
-        .padLeft(6, '0');
-
-    await Future.delayed(const Duration(milliseconds: 500));
-    setState(() => _isLoading = false);
-
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('OTP for $fullPhone is: $_generatedOTP'),
-        duration: const Duration(seconds: 10),
-        backgroundColor: Colors.green,
-      ),
+    await _authService.verifyPhoneNumber(
+      phoneNumber: fullPhone,
+      codeSent: (verificationId) {
+        setState(() {
+          _verificationId = verificationId;
+          _codeSent = true;
+          _isLoading = false;
+        });
+        _showOTPDialog(fullPhone);
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('OTP sent to $fullPhone')));
+      },
+      verificationFailed: (error) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $error'), backgroundColor: Colors.red),
+        );
+      },
+      codeSentTimeout: () {
+        setState(() => _isLoading = false);
+      },
     );
-
-    _showOTPDialog(fullPhone);
   }
 
   void _showOTPDialog(String phone) {
@@ -86,133 +93,140 @@ class _LoginScreenState extends State<LoginScreen> {
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) => StatefulBuilder(
-        builder: (dialogContext, setDialogState) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            _otpController.text = _generatedOTP;
-          });
-
-          return AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            title: const Row(
-              children: [
-                Icon(Icons.sms, color: Color(0xFF0D47A1)),
-                SizedBox(width: 8),
-                Text('Enter OTP', style: TextStyle(color: Color(0xFF0D47A1))),
-              ],
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'OTP sent to $phone',
-                  style: const TextStyle(color: Colors.grey, fontSize: 14),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _otpController,
-                  keyboardType: TextInputType.number,
-                  maxLength: 6,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 24, letterSpacing: 8),
-                  decoration: InputDecoration(
-                    hintText: '------',
-                    counterText: '',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    filled: true,
-                    fillColor: Colors.grey.shade50,
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Row(
+            children: [
+              Icon(Icons.sms, color: Color(0xFF0D47A1)),
+              SizedBox(width: 8),
+              Text('Enter OTP', style: TextStyle(color: Color(0xFF0D47A1))),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'OTP sent to $phone',
+                style: const TextStyle(color: Colors.grey, fontSize: 14),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _otpController,
+                keyboardType: TextInputType.number,
+                maxLength: 6,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 24, letterSpacing: 8),
+                decoration: InputDecoration(
+                  hintText: '------',
+                  counterText: '',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
+                  filled: true,
+                  fillColor: Colors.grey.shade50,
                 ),
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text(
-                      "Didn't receive? ",
-                      style: TextStyle(fontSize: 12),
-                    ),
-                    _resendTimer > 0
-                        ? Text(
-                            'Resend in ${_resendTimer}s',
-                            style: const TextStyle(
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text(
+                    "Didn't receive? ",
+                    style: TextStyle(fontSize: 12),
+                  ),
+                  _resendTimer > 0
+                      ? Text(
+                          'Resend in ${_resendTimer}s',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey,
+                          ),
+                        )
+                      : GestureDetector(
+                          onTap: () {
+                            setDialogState(() {});
+                            _sendOTP();
+                          },
+                          child: const Text(
+                            'Resend OTP',
+                            style: TextStyle(
                               fontSize: 12,
-                              color: Colors.grey,
-                            ),
-                          )
-                        : GestureDetector(
-                            onTap: () {
-                              setDialogState(() {});
-                              _startResendTimer();
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('OTP resent to $phone')),
-                              );
-                            },
-                            child: const Text(
-                              'Resend OTP',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Color(0xFF0D47A1),
-                                fontWeight: FontWeight.bold,
-                              ),
+                              color: Color(0xFF0D47A1),
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
-                  ],
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  _timer?.cancel();
-                  Navigator.pop(dialogContext);
-                },
-                child: const Text('Change Number'),
+                        ),
+                ],
               ),
-              ElevatedButton(
-                onPressed: _isLoading
-                    ? null
-                    : () async {
-                        final otp = _otpController.text.trim();
-                        if (otp.isEmpty || otp.length != 6) {
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                _timer?.cancel();
+                Navigator.pop(dialogContext);
+                setState(() => _codeSent = false);
+              },
+              child: const Text('Change Number'),
+            ),
+            ElevatedButton(
+              onPressed: _isLoading
+                  ? null
+                  : () async {
+                      final otp = _otpController.text.trim();
+                      if (otp.isEmpty || otp.length != 6) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Please enter 6-digit OTP'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        return;
+                      }
+
+                      setState(() => _isLoading = true);
+
+                      try {
+                        final credential = await _authService.verifyOTP(otp);
+                        if (credential != null && mounted) {
+                          Navigator.pop(dialogContext);
+                          Navigator.of(context).pushReplacement(
+                            MaterialPageRoute(
+                              builder: (_) => const HomeScreen(),
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Please enter 6-digit OTP'),
+                            SnackBar(
+                              content: Text('Error: ${e.toString()}'),
                               backgroundColor: Colors.red,
                             ),
                           );
-                          return;
                         }
+                      }
 
-                        setState(() => _isLoading = true);
-                        await Future.delayed(const Duration(milliseconds: 800));
-                        setState(() => _isLoading = false);
-
-                        if (!mounted) return;
-                        Navigator.pop(dialogContext);
-                        Navigator.of(context).pushReplacement(
-                          MaterialPageRoute(builder: (_) => const HomeScreen()),
-                        );
-                      },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0D47A1),
-                ),
-                child: _isLoading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : const Text('Verify & Login'),
+                      if (mounted) setState(() => _isLoading = false);
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0D47A1),
               ),
-            ],
-          );
-        },
+              child: _isLoading
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : const Text('Verify & Login'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -302,6 +316,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         TextField(
                           controller: _phoneController,
                           keyboardType: TextInputType.phone,
+                          enabled: !_codeSent,
                           decoration: InputDecoration(
                             labelText: 'Phone Number',
                             prefixText: '+91 ',
