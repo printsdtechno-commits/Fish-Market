@@ -19,6 +19,73 @@ class AuthService {
     return querySnapshot.docs.isNotEmpty;
   }
 
+  // Email/Password Sign In
+  Future<User?> signInWithEmailPassword(String email, String password) async {
+    try {
+      final credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      return credential.user;
+    } on FirebaseAuthException catch (e) {
+      throw Exception(_getAuthErrorMessage(e.code));
+    }
+  }
+
+  // Email/Password Sign Up
+  Future<User?> signUpWithEmailPassword(
+    String email,
+    String password,
+    String name,
+    String phone,
+  ) async {
+    try {
+      final credential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(email: email, password: password);
+
+      if (credential.user != null) {
+        // Update display name
+        await credential.user!.updateDisplayName(name);
+
+        // Create user document in Firestore
+        await _firestore.collection('users').doc(credential.user!.uid).set({
+          'email': email,
+          'name': name,
+          'phoneNumber': phone,
+          'role': 'admin',
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
+
+      return credential.user;
+    } on FirebaseAuthException catch (e) {
+      throw Exception(_getAuthErrorMessage(e.code));
+    } catch (e) {
+      throw Exception('Signup failed: ${e.toString()}');
+    }
+  }
+
+  String _getAuthErrorMessage(String code) {
+    switch (code) {
+      case 'user-not-found':
+        return 'No user found with this email';
+      case 'wrong-password':
+        return 'Wrong password';
+      case 'email-already-in-use':
+        return 'Email already registered';
+      case 'invalid-email':
+        return 'Invalid email address';
+      case 'weak-password':
+        return 'Password is too weak';
+      case 'user-disabled':
+        return 'This account has been disabled';
+      case 'too-many-requests':
+        return 'Too many attempts. Please try again later';
+      default:
+        return 'Login failed. Please try again';
+    }
+  }
+
   Future<void> verifyPhoneNumber({
     required String phoneNumber,
     required Function(String) codeSent,
@@ -31,7 +98,16 @@ class AuthService {
         await _auth.signInWithCredential(credential);
       },
       verificationFailed: (FirebaseAuthException e) {
-        verificationFailed(e.message ?? 'Verification failed');
+        // Handle MFA-related errors
+        if (e.code == 'multi-factor-auth-required') {
+          verificationFailed(
+            'MFA is required for this account. Please contact admin to disable MFA or use a different account.',
+          );
+        } else if (e.code == 'missing-verification-id') {
+          verificationFailed('Session expired. Please try again.');
+        } else {
+          verificationFailed(e.message ?? 'Verification failed');
+        }
       },
       codeSent: (String verificationId, int? resendToken) {
         _verificationId = verificationId;

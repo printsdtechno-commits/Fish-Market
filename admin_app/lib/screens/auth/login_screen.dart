@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import '../home/home_screen.dart';
@@ -12,224 +11,55 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _phoneController = TextEditingController();
-  final _otpController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
   final _authService = AuthService();
 
   bool _isLoading = false;
-  bool _codeSent = false;
-  int _resendTimer = 30;
-  Timer? _timer;
-  String _verificationId = '';
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
-    _phoneController.dispose();
-    _otpController.dispose();
-    _timer?.cancel();
+    _emailController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
-  void _startResendTimer() {
-    _resendTimer = 30;
-    _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!mounted) {
-        timer.cancel();
-        return;
-      }
-      setState(() {
-        _resendTimer--;
-        if (_resendTimer <= 0) {
-          timer.cancel();
-        }
-      });
-    });
-  }
+  Future<void> _login() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
 
-  Future<void> _sendOTP() async {
-    final phone = _phoneController.text.trim();
-    if (phone.isEmpty || phone.length < 10) {
+    if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter valid phone number')),
+        const SnackBar(
+          content: Text('Please enter email and password'),
+          backgroundColor: Colors.red,
+        ),
       );
       return;
     }
 
     setState(() => _isLoading = true);
 
-    final fullPhone = phone.startsWith('+91') ? phone : '+91$phone';
-
-    // Use Firebase Auth
-    await _authService.verifyPhoneNumber(
-      phoneNumber: fullPhone,
-      codeSent: (verificationId) {
-        setState(() {
-          _verificationId = verificationId;
-          _codeSent = true;
-          _isLoading = false;
-        });
-        _showOTPDialog(fullPhone);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('OTP sent to $fullPhone')));
-      },
-      verificationFailed: (error) {
-        setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $error'), backgroundColor: Colors.red),
+    try {
+      final user = await _authService.signInWithEmailPassword(email, password);
+      if (user != null && mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
         );
-      },
-      codeSentTimeout: () {
-        setState(() => _isLoading = false);
-      },
-    );
-  }
-
-  void _showOTPDialog(String phone) {
-    _otpController.clear();
-    _startResendTimer();
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (dialogContext, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
           ),
-          title: const Row(
-            children: [
-              Icon(Icons.sms, color: Color(0xFF0D47A1)),
-              SizedBox(width: 8),
-              Text('Enter OTP', style: TextStyle(color: Color(0xFF0D47A1))),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'OTP sent to $phone',
-                style: const TextStyle(color: Colors.grey, fontSize: 14),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _otpController,
-                keyboardType: TextInputType.number,
-                maxLength: 6,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 24, letterSpacing: 8),
-                decoration: InputDecoration(
-                  hintText: '------',
-                  counterText: '',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  filled: true,
-                  fillColor: Colors.grey.shade50,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text(
-                    "Didn't receive? ",
-                    style: TextStyle(fontSize: 12),
-                  ),
-                  _resendTimer > 0
-                      ? Text(
-                          'Resend in ${_resendTimer}s',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey,
-                          ),
-                        )
-                      : GestureDetector(
-                          onTap: () {
-                            setDialogState(() {});
-                            _sendOTP();
-                          },
-                          child: const Text(
-                            'Resend OTP',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Color(0xFF0D47A1),
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                ],
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                _timer?.cancel();
-                Navigator.pop(dialogContext);
-                setState(() => _codeSent = false);
-              },
-              child: const Text('Change Number'),
-            ),
-            ElevatedButton(
-              onPressed: _isLoading
-                  ? null
-                  : () async {
-                      final otp = _otpController.text.trim();
-                      if (otp.isEmpty || otp.length != 6) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Please enter 6-digit OTP'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                        return;
-                      }
+        );
+      }
+    }
 
-                      setState(() => _isLoading = true);
-
-                      try {
-                        final credential = await _authService.verifyOTP(otp);
-                        if (credential != null && mounted) {
-                          Navigator.pop(dialogContext);
-                          Navigator.of(context).pushReplacement(
-                            MaterialPageRoute(
-                              builder: (_) => const HomeScreen(),
-                            ),
-                          );
-                        }
-                      } catch (e) {
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Error: ${e.toString()}'),
-                              backgroundColor: Colors.red,
-                            ),
-                          );
-                        }
-                      }
-
-                      if (mounted) setState(() => _isLoading = false);
-                    },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF0D47A1),
-              ),
-              child: _isLoading
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                      ),
-                    )
-                  : const Text('Verify & Login'),
-            ),
-          ],
-        ),
-      ),
-    );
+    if (mounted) setState(() => _isLoading = false);
   }
 
   @override
@@ -315,14 +145,12 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: 24),
                         TextField(
-                          controller: _phoneController,
-                          keyboardType: TextInputType.phone,
-                          enabled: !_codeSent,
+                          controller: _emailController,
+                          keyboardType: TextInputType.emailAddress,
                           decoration: InputDecoration(
-                            labelText: 'Phone Number',
-                            prefixText: '+91 ',
+                            labelText: 'Email',
                             prefixIcon: const Icon(
-                              Icons.phone,
+                              Icons.email,
                               color: Color(0xFF0D47A1),
                             ),
                             border: OutlineInputBorder(
@@ -332,11 +160,60 @@ class _LoginScreenState extends State<LoginScreen> {
                             fillColor: Colors.grey.shade50,
                           ),
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 16),
+                        TextField(
+                          controller: _passwordController,
+                          obscureText: _obscurePassword,
+                          decoration: InputDecoration(
+                            labelText: 'Password',
+                            prefixIcon: const Icon(
+                              Icons.lock,
+                              color: Color(0xFF0D47A1),
+                            ),
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _obscurePassword
+                                    ? Icons.visibility
+                                    : Icons.visibility_off,
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _obscurePassword = !_obscurePassword;
+                                });
+                              },
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            filled: true,
+                            fillColor: Colors.grey.shade50,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: () {
+                              // Forgot password functionality
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Contact admin to reset password',
+                                  ),
+                                ),
+                              );
+                            },
+                            child: const Text(
+                              'Forgot Password?',
+                              style: TextStyle(color: Color(0xFF0D47A1)),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
                         SizedBox(
                           height: 50,
                           child: ElevatedButton(
-                            onPressed: _isLoading ? null : _sendOTP,
+                            onPressed: _isLoading ? null : _login,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF0D47A1),
                               shape: RoundedRectangleBorder(
@@ -353,7 +230,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ),
                                   )
                                 : const Text(
-                                    'Send OTP',
+                                    'Login',
                                     style: TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,

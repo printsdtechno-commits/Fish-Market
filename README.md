@@ -2,6 +2,28 @@
 
 A comprehensive IoT-based smart weighing and billing system designed exclusively for fish shops, fish markets, and harbor vendors.
 
+## 📱 Live Applications
+
+### 🔗 Direct Links
+- **Admin Panel**: https://planning-with-ai-3f007.web.app
+- **Merchant App**: (Build & deploy locally)
+- **Client App**: (Build & deploy locally)
+
+### Running Apps Locally
+```bash
+# Merchant App
+cd merchant_app
+flutter run
+
+# Client App  
+cd client_app
+flutter run
+
+# Admin App
+cd admin_app
+flutter run
+```
+
 ## 🎯 System Overview
 
 This system consists of:
@@ -88,9 +110,9 @@ Total Amount:      ₹1,143.80
 
 ## 🔐 Authentication & Security
 
-- **OTP-based login** for all apps (Firebase Phone Auth)
+- **Email/Password login** for all apps (Firebase Email Auth)
 - **Role-based access control** (Merchant, Client, Admin)
-- **Unique phone number** validation (no duplicates)
+- **Unique email** validation (no duplicates)
 - **Tamper-proof** weight readings
 - **Encrypted** data transmission
 - **Firestore security rules** enforced
@@ -153,7 +175,7 @@ Total Amount:      ₹1,143.80
 - **Libraries**: HX711, ArduinoJson
 
 ### Backend
-- **Authentication**: Firebase Phone Auth
+- **Authentication**: Firebase Email/Password Auth
 - **Database**: Cloud Firestore
 - **Storage**: Firebase Storage
 - **Hosting**: Firebase Realtime Database
