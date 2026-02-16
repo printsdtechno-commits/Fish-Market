@@ -254,8 +254,8 @@ Proprietary - All rights reserved
 ## 🆘 Support
 
 For technical support or queries:
-- Email: printsdtechno@gmail.com
-- Phone: +91-8056113299
+- Email: support@fishmarket.com
+- Phone: +91-XXXXXXXXXX
 - Documentation: See SETUP_GUIDE.md
 
 ## 🎯 Roadmap
