@@ -1,5 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "flutter",
   "buildCommand": "flutter build web --web-renderer html",
   "outputDirectory": "build/web",
   "installCommand": "flutter pub get",
