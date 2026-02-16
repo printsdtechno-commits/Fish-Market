@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import '../home/home_screen.dart';
@@ -15,14 +16,33 @@ class _LoginScreenState extends State<LoginScreen> {
   final _otpController = TextEditingController();
   final _authService = AuthService();
 
-  bool _codeSent = false;
   bool _isLoading = false;
+  int _resendTimer = 30;
+  Timer? _timer;
 
   @override
   void dispose() {
     _phoneController.dispose();
     _otpController.dispose();
+    _timer?.cancel();
     super.dispose();
+  }
+
+  void _startResendTimer() {
+    _resendTimer = 30;
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      setState(() {
+        _resendTimer--;
+        if (_resendTimer <= 0) {
+          timer.cancel();
+        }
+      });
+    });
   }
 
   Future<void> _sendOTP() async {
@@ -40,35 +60,144 @@ class _LoginScreenState extends State<LoginScreen> {
 
     // TEST MODE - Skip Firebase check
     await Future.delayed(const Duration(milliseconds: 500));
-    setState(() {
-      _codeSent = true;
-      _isLoading = false;
-    });
-    if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('OTP sent to $fullPhone')));
-  }
-
-  Future<void> _verifyOTP() async {
-    final otp = _otpController.text.trim();
-    if (otp.isEmpty || otp.length != 6) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Please enter 6-digit OTP')));
-      return;
-    }
-
-    setState(() => _isLoading = true);
-
-    // TEST MODE - Direct login
-    await Future.delayed(const Duration(milliseconds: 500));
     setState(() => _isLoading = false);
 
     if (!mounted) return;
-    Navigator.of(
-      context,
-    ).pushReplacement(MaterialPageRoute(builder: (_) => const HomeScreen()));
+    _showOTPDialog(fullPhone);
+  }
+
+  void _showOTPDialog(String phone) {
+    _otpController.clear();
+    _startResendTimer();
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Row(
+            children: [
+              Icon(Icons.sms, color: Color(0xFF0D47A1)),
+              SizedBox(width: 8),
+              Text('Enter OTP', style: TextStyle(color: Color(0xFF0D47A1))),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'OTP sent to $phone',
+                style: const TextStyle(color: Colors.grey, fontSize: 14),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _otpController,
+                keyboardType: TextInputType.number,
+                maxLength: 6,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 24, letterSpacing: 8),
+                decoration: InputDecoration(
+                  hintText: '------',
+                  counterText: '',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  filled: true,
+                  fillColor: Colors.grey.shade50,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text(
+                    "Didn't receive? ",
+                    style: TextStyle(fontSize: 12),
+                  ),
+                  _resendTimer > 0
+                      ? Text(
+                          'Resend in ${_resendTimer}s',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey,
+                          ),
+                        )
+                      : GestureDetector(
+                          onTap: () {
+                            setDialogState(() {});
+                            _startResendTimer();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('OTP resent to $phone')),
+                            );
+                          },
+                          child: const Text(
+                            'Resend OTP',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF0D47A1),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                ],
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                _timer?.cancel();
+                Navigator.pop(context);
+              },
+              child: const Text('Change Number'),
+            ),
+            ElevatedButton(
+              onPressed: _isLoading
+                  ? null
+                  : () async {
+                      final otp = _otpController.text.trim();
+                      if (otp.isEmpty || otp.length != 6) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Please enter 6-digit OTP'),
+                          ),
+                        );
+                        return;
+                      }
+
+                      setState(() => _isLoading = true);
+
+                      // TEST MODE - Direct login
+                      await Future.delayed(const Duration(milliseconds: 500));
+                      setState(() => _isLoading = false);
+
+                      if (!mounted) return;
+                      Navigator.pop(context);
+                      Navigator.of(context).pushReplacement(
+                        MaterialPageRoute(builder: (_) => const HomeScreen()),
+                      );
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0D47A1),
+              ),
+              child: _isLoading
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : const Text('Verify & Login'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -156,7 +285,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         TextField(
                           controller: _phoneController,
                           keyboardType: TextInputType.phone,
-                          enabled: !_codeSent,
                           decoration: InputDecoration(
                             labelText: 'Phone Number',
                             prefixText: '+91 ',
@@ -171,34 +299,11 @@ class _LoginScreenState extends State<LoginScreen> {
                             fillColor: Colors.grey.shade50,
                           ),
                         ),
-                        if (_codeSent) ...[
-                          const SizedBox(height: 16),
-                          TextField(
-                            controller: _otpController,
-                            keyboardType: TextInputType.number,
-                            maxLength: 6,
-                            decoration: InputDecoration(
-                              labelText: 'OTP',
-                              prefixIcon: const Icon(
-                                Icons.lock,
-                                color: Color(0xFF0D47A1),
-                              ),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              filled: true,
-                              fillColor: Colors.grey.shade50,
-                              counterText: '',
-                            ),
-                          ),
-                        ],
                         const SizedBox(height: 20),
                         SizedBox(
                           height: 50,
                           child: ElevatedButton(
-                            onPressed: _isLoading
-                                ? null
-                                : (_codeSent ? _verifyOTP : _sendOTP),
+                            onPressed: _isLoading ? null : _sendOTP,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF0D47A1),
                               shape: RoundedRectangleBorder(
@@ -214,11 +319,11 @@ class _LoginScreenState extends State<LoginScreen> {
                                       strokeWidth: 2,
                                     ),
                                   )
-                                : Text(
-                                    _codeSent ? 'Login' : 'Send OTP',
-                                    style: const TextStyle(
+                                : const Text(
+                                    'Send OTP',
+                                    style: TextStyle(
                                       fontSize: 16,
-                                      fontWeight: FontWeight.w600,
+                                      fontWeight: FontWeight.bold,
                                       color: Colors.white,
                                     ),
                                   ),
@@ -228,33 +333,31 @@ class _LoginScreenState extends State<LoginScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Text("Don't have account? "),
-                            TextButton(
-                              onPressed: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const SignupScreen(),
+                            const Text(
+                              "Don't have an account? ",
+                              style: TextStyle(color: Color(0xFF546E7A)),
+                            ),
+                            GestureDetector(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const SignupScreen(),
+                                  ),
+                                );
+                              },
+                              child: const Text(
+                                'Sign Up',
+                                style: TextStyle(
+                                  color: Color(0xFF0D47A1),
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
-                              child: const Text('Sign Up'),
                             ),
                           ],
                         ),
-                        if (_codeSent)
-                          TextButton(
-                            onPressed: () => setState(() {
-                              _codeSent = false;
-                              _otpController.clear();
-                            }),
-                            child: const Text('← Change Phone Number'),
-                          ),
                       ],
                     ),
-                  ),
-                  const SizedBox(height: 20),
-                  const Text(
-                    '© 2024 Fish Market',
-                    style: TextStyle(color: Colors.white60, fontSize: 12),
                   ),
                 ],
               ),
