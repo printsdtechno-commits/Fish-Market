@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
-import '../auth/login_screen.dart';
 import 'dashboard_screen.dart';
 import 'merchants_screen.dart';
 import 'reports_screen.dart';
@@ -32,13 +31,7 @@ class _HomeScreenState extends State<HomeScreen> {
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async {
-              final navigator = Navigator.of(context);
               await _authService.signOut();
-              if (!mounted) return;
-              navigator.pushAndRemoveUntil(
-                MaterialPageRoute(builder: (_) => const LoginScreen()),
-                (route) => false,
-              );
             },
           ),
         ],
@@ -52,10 +45,7 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icon(Icons.dashboard),
             label: 'Dashboard',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.store),
-            label: 'Merchants',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.store), label: 'Merchants'),
           BottomNavigationBarItem(
             icon: Icon(Icons.analytics),
             label: 'Reports',

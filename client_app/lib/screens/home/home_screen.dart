@@ -3,7 +3,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/auth_service.dart';
 import '../../models/order_model.dart';
 import 'package:intl/intl.dart';
-import '../auth/login_screen.dart';
 import 'order_detail_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -16,7 +15,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final _authService = AuthService();
   final _firestore = FirebaseFirestore.instance;
-  
+
   String _filter = 'active';
 
   @override
@@ -31,13 +30,7 @@ class _HomeScreenState extends State<HomeScreen> {
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async {
-              final navigator = Navigator.of(context);
               await _authService.signOut();
-              if (!mounted) return;
-              navigator.pushAndRemoveUntil(
-                MaterialPageRoute(builder: (_) => const LoginScreen()),
-                (route) => false,
-              );
             },
           ),
         ],
@@ -48,7 +41,10 @@ class _HomeScreenState extends State<HomeScreen> {
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                const Text('Filter: ', style: TextStyle(fontWeight: FontWeight.bold)),
+                const Text(
+                  'Filter: ',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: SingleChildScrollView(
@@ -73,7 +69,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         _FilterChip(
                           label: 'Cancelled',
                           selected: _filter == 'cancelled',
-                          onSelected: () => setState(() => _filter = 'cancelled'),
+                          onSelected: () =>
+                              setState(() => _filter = 'cancelled'),
                         ),
                         _FilterChip(
                           label: 'All',
@@ -88,72 +85,84 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           Expanded(
-            child: userId == null
-                ? const Center(child: Text('Please login'))
-                : StreamBuilder<QuerySnapshot>(
-                    stream: _firestore
-                        .collection('orders')
-                        .where('clientId', isEqualTo: userId)
-                        .orderBy('createdAt', descending: true)
-                        .snapshots(),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
+            child: StreamBuilder<QuerySnapshot>(
+              stream: _firestore
+                  .collection('orders')
+                  .where('clientId', isEqualTo: userId)
+                  .orderBy('createdAt', descending: true)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-                      if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                        return const Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.shopping_bag_outlined, size: 80, color: Colors.grey),
-                              SizedBox(height: 16),
-                              Text('No orders yet'),
-                            ],
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.shopping_bag_outlined,
+                          size: 80,
+                          color: Colors.grey,
+                        ),
+                        SizedBox(height: 16),
+                        Text('No orders yet'),
+                      ],
+                    ),
+                  );
+                }
+
+                var orders = snapshot.data!.docs
+                    .map((doc) => OrderModel.fromFirestore(doc))
+                    .toList();
+
+                if (_filter == 'active') {
+                  orders = orders
+                      .where((o) => o.orderStatus == 'active')
+                      .toList();
+                } else if (_filter == 'paid') {
+                  orders = orders
+                      .where((o) => o.paymentStatus == 'paid')
+                      .toList();
+                } else if (_filter == 'pending') {
+                  orders = orders
+                      .where(
+                        (o) =>
+                            o.paymentStatus == 'pending' &&
+                            o.orderStatus != 'cancelled',
+                      )
+                      .toList();
+                } else if (_filter == 'cancelled') {
+                  orders = orders
+                      .where((o) => o.orderStatus == 'cancelled')
+                      .toList();
+                }
+
+                if (orders.isEmpty) {
+                  return const Center(child: Text('No orders found'));
+                }
+
+                return ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: orders.length,
+                  itemBuilder: (context, index) {
+                    final order = orders[index];
+                    return _OrderCard(
+                      order: order,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => OrderDetailScreen(order: order),
                           ),
                         );
-                      }
-
-                      var orders = snapshot.data!.docs
-                          .map((doc) => OrderModel.fromFirestore(doc))
-                          .toList();
-
-                      if (_filter == 'active') {
-                        orders = orders.where((o) => o.orderStatus == 'active').toList();
-                      } else if (_filter == 'paid') {
-                        orders = orders.where((o) => o.paymentStatus == 'paid').toList();
-                      } else if (_filter == 'pending') {
-                        orders = orders.where((o) => o.paymentStatus == 'pending' && o.orderStatus != 'cancelled').toList();
-                      } else if (_filter == 'cancelled') {
-                        orders = orders.where((o) => o.orderStatus == 'cancelled').toList();
-                      }
-
-                      if (orders.isEmpty) {
-                        return const Center(
-                          child: Text('No orders found'),
-                        );
-                      }
-
-                      return ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: orders.length,
-                        itemBuilder: (context, index) {
-                          final order = orders[index];
-                          return _OrderCard(
-                            order: order,
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => OrderDetailScreen(order: order),
-                                ),
-                              );
-                            },
-                          );
-                        },
-                      );
-                    },
-                  ),
+                      },
+                    );
+                  },
+                );
+              },
+            ),
           ),
         ],
       ),
@@ -182,9 +191,7 @@ class _FilterChip extends StatelessWidget {
         onSelected: (_) => onSelected(),
         selectedColor: Colors.teal,
         checkmarkColor: Colors.white,
-        labelStyle: TextStyle(
-          color: selected ? Colors.white : Colors.black,
-        ),
+        labelStyle: TextStyle(color: selected ? Colors.white : Colors.black),
       ),
     );
   }
@@ -194,10 +201,7 @@ class _OrderCard extends StatelessWidget {
   final OrderModel order;
   final VoidCallback onTap;
 
-  const _OrderCard({
-    required this.order,
-    required this.onTap,
-  });
+  const _OrderCard({required this.order, required this.onTap});
 
   Color _getStatusColor() {
     if (order.orderStatus == 'cancelled') return Colors.red;
@@ -227,13 +231,13 @@ class _OrderCard extends StatelessWidget {
                 children: [
                   Text(
                     'Invoice: ${order.invoiceNumber}',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey,
-                    ),
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: _getStatusColor(),
                       borderRadius: BorderRadius.circular(12),
@@ -285,10 +289,17 @@ class _OrderCard extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 4),
-                        Text('${order.weight.toStringAsFixed(2)} kg × ₹${order.ratePerKg.toStringAsFixed(2)}'),
                         Text(
-                          DateFormat('dd MMM yyyy, hh:mm a').format(order.createdAt),
-                          style: const TextStyle(fontSize: 12, color: Colors.grey),
+                          '${order.weight.toStringAsFixed(2)} kg × ₹${order.ratePerKg.toStringAsFixed(2)}',
+                        ),
+                        Text(
+                          DateFormat(
+                            'dd MMM yyyy, hh:mm a',
+                          ).format(order.createdAt),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey,
+                          ),
                         ),
                       ],
                     ),

@@ -1,6 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "framework": "flutter",
   "buildCommand": "cd admin_app && flutter build web --web-renderer html",
   "outputDirectory": "admin_app/build/web",
   "installCommand": "cd admin_app && flutter pub get",

@@ -3,7 +3,6 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'firebase_options.dart';
 import 'theme/app_theme.dart';
-import 'screens/auth/login_screen.dart';
 import 'screens/home/home_screen.dart';
 
 void main() async {
@@ -34,7 +33,7 @@ class AdminApp extends StatelessWidget {
             return const HomeScreen();
           }
 
-          return const LoginScreen();
+          return const HomeScreen();
         },
       ),
     );

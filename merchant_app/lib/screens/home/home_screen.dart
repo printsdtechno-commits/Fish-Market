@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import '../../models/user_model.dart';
-import '../auth/login_screen.dart';
 import 'fish_inventory_screen.dart';
 import 'orders_screen.dart';
 import 'dashboard_screen.dart';
@@ -45,13 +44,7 @@ class _HomeScreenState extends State<HomeScreen> {
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async {
-              final navigator = Navigator.of(context);
               await _authService.signOut();
-              if (!mounted) return;
-              navigator.pushAndRemoveUntil(
-                MaterialPageRoute(builder: (_) => const LoginScreen()),
-                (route) => false,
-              );
             },
           ),
         ],

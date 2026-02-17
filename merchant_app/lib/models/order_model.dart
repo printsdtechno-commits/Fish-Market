@@ -1,5 +1,27 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+/// Helper class to track value changes in order fields
+class ValueChange<T> {
+  final T originalValue;
+  T _currentValue;
+
+  ValueChange(this.originalValue) : _currentValue = originalValue;
+
+  T get value => _currentValue;
+
+  bool get hasChanged => originalValue != _currentValue;
+
+  void update(T newValue) {
+    if (newValue != originalValue) {
+      _currentValue = newValue;
+    }
+  }
+
+  void reset() {
+    _currentValue = originalValue;
+  }
+}
+
 class OrderModel {
   final String id;
   final String merchantId;
@@ -9,18 +31,18 @@ class OrderModel {
   final double weight;
   final double ratePerKg;
   final String type;
-  
+
   final double fishAmount;
   final double fishGST;
   final double deliveryCharge;
   final double deliveryGST;
   final double totalAmount;
-  
+
   final String paymentMethod;
   final String paymentStatus;
   final String orderStatus;
   final String? cancellationReason;
-  
+
   final String invoiceNumber;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -73,8 +95,8 @@ class OrderModel {
       invoiceNumber: data['invoiceNumber'] ?? '',
       createdAt: (data['createdAt'] as Timestamp).toDate(),
       updatedAt: (data['updatedAt'] as Timestamp).toDate(),
-      completedAt: data['completedAt'] != null 
-          ? (data['completedAt'] as Timestamp).toDate() 
+      completedAt: data['completedAt'] != null
+          ? (data['completedAt'] as Timestamp).toDate()
           : null,
     );
   }
@@ -100,7 +122,9 @@ class OrderModel {
       'invoiceNumber': invoiceNumber,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
-      'completedAt': completedAt != null ? Timestamp.fromDate(completedAt!) : null,
+      'completedAt': completedAt != null
+          ? Timestamp.fromDate(completedAt!)
+          : null,
     };
   }
 
@@ -116,7 +140,12 @@ class OrderModel {
     return deliveryCharge * 0.18;
   }
 
-  static double calculateTotal(double fishAmount, double fishGST, double deliveryCharge, double deliveryGST) {
+  static double calculateTotal(
+    double fishAmount,
+    double fishGST,
+    double deliveryCharge,
+    double deliveryGST,
+  ) {
     return fishAmount + fishGST + deliveryCharge + deliveryGST;
   }
 }
